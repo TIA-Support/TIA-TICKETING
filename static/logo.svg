@@ -1,0 +1,21 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="orbGradient" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#d9b8ff" />
+      <stop offset="55%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#4c1d95" />
+    </radialGradient>
+    <linearGradient id="halo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9d7cff" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#4c1d95" stop-opacity="0.05" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="24" fill="#0f172a" />
+  <circle cx="60" cy="60" r="34" fill="url(#orbGradient)" />
+  <circle cx="84" cy="38" r="10" fill="#c4b5fd" opacity="0.85" />
+  <circle cx="37" cy="33" r="6" fill="#e9d5ff" opacity="0.95" />
+  <circle cx="28" cy="78" r="8" fill="#a78bfa" opacity="0.9" />
+  <circle cx="80" cy="85" r="5" fill="#d8b4fe" opacity="0.95" />
+  <circle cx="60" cy="60" r="34" stroke="rgba(255,255,255,0.28)" stroke-width="2" fill="none" />
+  <circle cx="60" cy="60" r="44" fill="url(#halo)" />
+</svg>

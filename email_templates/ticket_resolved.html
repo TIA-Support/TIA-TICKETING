@@ -1,0 +1,27 @@
+<!--
+  Tokens used: client_name, title, date_logged, resolved_at, technician_name, support_email
+-->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+  <div style="background: #6d28d9; padding: 20px 24px; border-radius: 8px 8px 0 0;">
+    <span style="color: #ffffff; font-size: 18px; font-weight: bold;">TIA Solutions Support</span>
+  </div>
+  <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px; line-height: 1.6;">
+    <p>Dear {{client_name}},</p>
+
+    <p>We are pleased to inform you that your request has been successfully resolved. Please find the details below:</p>
+
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+      <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Request</td><td style="padding: 6px 0;">{{title}}</td></tr>
+      <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Date Logged</td><td style="padding: 6px 0;">{{date_logged}}</td></tr>
+      <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Date Resolved</td><td style="padding: 6px 0;">{{resolved_at}}</td></tr>
+    </table>
+
+    <p>Our team has completed the necessary steps to address this matter, and everything is now functioning as expected.</p>
+
+    <p>If you experience any further issues or require additional assistance, please do not hesitate to reach out to us at {{support_email}} or 010 025 2503.</p>
+
+    <p>Thank you for giving us the opportunity to support your business. We value your partnership with Technology Infrastructure Architects.</p>
+
+    <p style="margin-top: 20px;">Request completed by: {{technician_name}}</p>
+  </div>
+</div>

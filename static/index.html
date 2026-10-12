@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIA-Solutions — Support Portal</title>
+  <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon/favicon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tia: {
+              50:  '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#8b5cf6',
+              500: '#7c3aed',
+              600: '#6d28d9',
+              700: '#5b21b6',
+              800: '#4c1d95',
+              900: '#2e1065',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="h-full bg-gray-50 text-gray-800">
+
+  <!-- ═══ Auth Views ═══════════════════════════════════════════════════════ -->
+  <div id="auth-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-800 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 bg-gradient-to-br from-violet-600 to-indigo-700 shadow-lg ring-2 ring-violet-200">
+          <img src="/logo%20pngTIA.png" alt="TIA Solutions logo" class="w-14 h-14" />
+        </div>
+        <h1 class="text-2xl font-bold text-slate-800">TIA Solutions</h1>
+        <p class="text-gray-500 text-sm mt-1">Support Portal</p>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form">
+        <h2 class="text-xl font-semibold mb-6 text-center text-gray-700">Sign In</h2>
+        <div id="login-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="login-email" type="email" placeholder="you@example.com"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm font-medium text-gray-700">Password</label>
+              <button onclick="showForgotPassword()" class="text-xs text-tia-600 hover:underline">Forgot password?</button>
+            </div>
+            <input id="login-password" type="password" placeholder="••••••••"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <button onclick="doLogin()"
+            class="w-full bg-tia-600 hover:bg-tia-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+            Sign In
+          </button>
+        </div>
+        <p class="text-center text-sm text-gray-500 mt-6">
+          Don't have an account? <button onclick="showRegister()" class="text-tia-600 font-medium hover:underline">Register</button>
+        </p>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div id="forgot-password-form" class="hidden">
+        <h2 class="text-xl font-semibold mb-2 text-center text-gray-700">Reset Password</h2>
+        <p class="text-center text-sm text-gray-500 mb-6">Enter your email and we'll send you a reset link.</p>
+        <div id="forgot-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <div id="forgot-success" class="hidden mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm"></div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="forgot-email" type="email" placeholder="you@example.com"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <button onclick="submitForgotPassword()"
+            class="w-full bg-tia-600 hover:bg-tia-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+            Send Reset Link
+          </button>
+        </div>
+        <p class="text-center text-sm text-gray-500 mt-6">
+          <button onclick="showLogin()" class="text-tia-600 font-medium hover:underline">Back to Sign In</button>
+        </p>
+      </div>
+
+      <!-- Reset Password Form (reached via emailed link with ?token=...) -->
+      <div id="reset-password-form" class="hidden">
+        <h2 class="text-xl font-semibold mb-6 text-center text-gray-700">Choose a New Password</h2>
+        <div id="reset-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <div id="reset-success" class="hidden mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm"></div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <input id="reset-password-input" type="password" placeholder="At least 8 characters"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <input id="reset-password-confirm" type="password" placeholder="Repeat password"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <button onclick="submitResetPassword()"
+            class="w-full bg-tia-600 hover:bg-tia-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+            Reset Password
+          </button>
+        </div>
+        <p class="text-center text-sm text-gray-500 mt-6">
+          <button onclick="showLogin()" class="text-tia-600 font-medium hover:underline">Back to Sign In</button>
+        </p>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-form" class="hidden">
+        <h2 class="text-xl font-semibold mb-6 text-center text-gray-700">Create Client Account</h2>
+        <div id="reg-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <div id="reg-success" class="hidden mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm"></div>
+        <div class="space-y-3">
+          <input id="reg-name"    type="text"  placeholder="Full Name"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          <input id="reg-email"   type="email" placeholder="Email Address"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          <input id="reg-company" type="text"  placeholder="Company Name *"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          <input id="reg-phone"   type="tel"   placeholder="Phone Number"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          <input id="reg-password" type="password" placeholder="Password (min 8 chars)"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          <button onclick="doRegister()"
+            class="w-full bg-tia-600 hover:bg-tia-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+            Create Account
+          </button>
+        </div>
+        <p class="text-center text-sm text-gray-500 mt-4">
+          Already have an account? <button onclick="showLogin()" class="text-tia-600 font-medium hover:underline">Sign In</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ App Shell ════════════════════════════════════════════════════════ -->
+  <div id="app-shell" class="hidden h-full flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 min-h-screen bg-gradient-to-b from-violet-950 via-purple-900 to-indigo-800 text-white flex flex-col shadow-xl flex-shrink-0">
+      <!-- Brand -->
+      <div class="p-5 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white/15 ring-2 ring-white/20 shadow-inner flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img src="/logo%20pngTIA.png" alt="TIA logo" class="w-8 h-8" />
+          </div>
+          <div class="leading-tight">
+            <div class="font-bold text-sm">TIA Solutions</div>
+            <div class="text-violet-200 text-xs">Support Portal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 p-4 space-y-1">
+        <button onclick="navigate('dashboard')" data-nav="dashboard"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-gauge-high w-4 text-center"></i> Dashboard
+        </button>
+        <button onclick="navigate('tickets')" data-nav="tickets"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-ticket w-4 text-center"></i> Tickets
+        </button>
+        <button onclick="navigate('new-ticket')" data-nav="new-ticket"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-plus w-4 text-center"></i> New Ticket
+        </button>
+        <!-- Staff only -->
+        <button onclick="navigate('clients')" data-nav="clients" id="nav-clients"
+          class="nav-item hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-building w-4 text-center"></i> Clients
+        </button>
+        <button onclick="navigate('job-cards')" data-nav="job-cards" id="nav-job-cards"
+          class="nav-item hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-clipboard-list w-4 text-center"></i> Job Cards
+        </button>
+        <!-- Admin only -->
+        <button onclick="navigate('users')" data-nav="users" id="nav-users"
+          class="nav-item hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-white/15">
+          <i class="fa-solid fa-users w-4 text-center"></i> Users
+        </button>
+      </nav>
+
+      <!-- User info -->
+      <div class="p-4 border-t border-tia-700">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="sidebar-avatar" class="w-8 h-8 rounded-full bg-tia-500 flex items-center justify-center text-sm font-bold"></div>
+          <div class="flex-1 min-w-0">
+            <div id="sidebar-name" class="text-sm font-medium truncate"></div>
+            <div id="sidebar-role" class="text-tia-300 text-xs capitalize"></div>
+          </div>
+        </div>
+        <button onclick="doLogout()" class="w-full text-left text-xs text-tia-300 hover:text-white flex items-center gap-2 transition">
+          <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-auto">
+      <!-- Top bar -->
+      <header class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <div id="page-title" class="font-semibold text-gray-700 text-lg"></div>
+        <div class="flex items-center gap-4">
+          <!-- Notification bell -->
+          <button onclick="navigate('notifications')" class="relative text-gray-500 hover:text-tia-600 transition">
+            <i class="fa-solid fa-bell text-lg"></i>
+            <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">0</span>
+          </button>
+          <div class="text-sm text-gray-500">
+            <span id="header-name" class="font-medium text-gray-700"></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Views -->
+      <div class="p-6">
+
+        <!-- Dashboard -->
+        <div id="view-dashboard" class="hidden">
+          <div id="dashboard-content"></div>
+        </div>
+
+        <!-- Ticket List -->
+        <div id="view-tickets" class="hidden">
+          <!-- Filters -->
+          <div class="bg-white rounded-xl border border-gray-200 p-4 mb-5 flex flex-wrap gap-3 items-center">
+            <input id="search-q" type="text" placeholder="Search tickets…"
+              class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 min-w-48" />
+            <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="pending">Pending</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            <select id="filter-priority" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+            <select id="filter-category" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="">All Categories</option>
+              <option value="cloud">Cloud Solutions</option>
+              <option value="network_security">Network & Cyber Security</option>
+              <option value="voip">VoIP – Voice Solutions</option>
+              <option value="it_support">IT Support</option>
+              <option value="hardware">Hardware & Maintenance</option>
+              <option value="general">General Inquiry</option>
+            </select>
+            <button onclick="loadTickets()" class="bg-tia-600 hover:bg-tia-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+              <i class="fa-solid fa-magnifying-glass mr-1"></i>Search
+            </button>
+            <button onclick="navigate('new-ticket')" class="ml-auto bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+              <i class="fa-solid fa-plus mr-1"></i>New Ticket
+            </button>
+          </div>
+
+          <!-- Table -->
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div id="ticket-table-wrap"></div>
+            <div id="ticket-pagination" class="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm text-gray-500"></div>
+          </div>
+        </div>
+
+        <!-- New Ticket -->
+        <div id="view-new-ticket" class="hidden max-w-2xl">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div id="new-ticket-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+            <div class="space-y-4">
+              <div id="nt-behalf-wrap" class="hidden p-3 bg-violet-50 border border-violet-200 rounded-lg space-y-3">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Client Company</label>
+                    <select id="nt-client" onchange="onNewTicketClientChange()"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                      <option value="">— Log as myself —</option>
+                      <option value="__new_client__">+ Add New Client…</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                    <select id="nt-contact" onchange="onNewTicketContactChange()"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                      <option value="">— Select a client first —</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Shown when "+ Add New Client" is chosen -->
+                <div id="nt-new-client-fields" class="hidden grid grid-cols-2 gap-3 pt-2 border-t border-violet-200">
+                  <div class="col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">New Company Name <span class="text-red-500">*</span></label>
+                    <input id="nt-new-client-name" type="text" placeholder="e.g. Acme Logistics"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+                  </div>
+                </div>
+
+                <!-- Shown when "+ Add New Client" or "+ Add New Contact" is chosen -->
+                <div id="nt-new-contact-fields" class="hidden grid grid-cols-2 gap-3 pt-2 border-t border-violet-200">
+                  <div class="col-span-2 text-xs font-medium text-gray-600">New Contact Details</div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Full Name <span class="text-red-500">*</span></label>
+                    <input id="nt-new-contact-name" type="text"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Email <span class="text-red-500">*</span></label>
+                    <input id="nt-new-contact-email" type="email"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                    <input id="nt-new-contact-phone" type="text"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Temporary Password <span class="text-red-500">*</span></label>
+                    <input id="nt-new-contact-password" type="text"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Request / Title <span class="text-red-500">*</span></label>
+                <input id="nt-title" type="text" placeholder="e.g. User: Nicole can't scan documents"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Request Level</label>
+                  <select id="nt-request-level" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                    <option value="Level 1">Level 1 — Request</option>
+                    <option value="Level 2">Level 2 — Low</option>
+                    <option value="Level 3" selected>Level 3 — Medium/Normal</option>
+                    <option value="Level 4">Level 4 — High</option>
+                    <option value="Level 5">Level 5 — Very High</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Support Type</label>
+                  <select id="nt-support-type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                    <option value="remote" selected>Remote</option>
+                    <option value="onsite">On-site</option>
+                    <option value="remote_onsite">Remote and On-site</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select id="nt-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                    <option value="cloud">Cloud Solutions</option>
+                    <option value="network_security">Network &amp; Cyber Security</option>
+                    <option value="voip">VoIP &ndash; Voice Solutions</option>
+                    <option value="it_support" selected>IT Support</option>
+                    <option value="hardware">Hardware &amp; Maintenance</option>
+                    <option value="general">General Inquiry</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select id="nt-priority" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+              <div id="nt-assign-wrap" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                <select id="nt-assigned-to" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                  <option value="">— Unassigned —</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-red-500">*</span></label>
+                <textarea id="nt-description" rows="5" placeholder="Please describe the issue in detail..."
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 resize-none"></textarea>
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button onclick="submitTicket()"
+                  class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-6 py-2 rounded-lg text-sm transition">
+                  <i class="fa-solid fa-paper-plane mr-1"></i> Submit Ticket
+                </button>
+                <button onclick="navigate('tickets')"
+                  class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm transition">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Detail -->
+        <div id="view-ticket-detail" class="hidden max-w-4xl">
+          <div id="ticket-detail-content"></div>
+        </div>
+
+        <!-- Users (admin) -->
+        <div id="view-users" class="hidden">
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+              <input id="user-search" type="text" placeholder="Search users…"
+                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 min-w-48" />
+              <select id="user-role-filter" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="agent">Agent</option>
+                <option value="technician">Technician</option>
+                <option value="client">Client</option>
+              </select>
+              <button onclick="loadUsers()" class="bg-tia-600 hover:bg-tia-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Search
+              </button>
+              <button onclick="openCreateUserModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-user-plus mr-1"></i>Add User
+              </button>
+            </div>
+            <div id="user-table-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Clients (staff) -->
+        <div id="view-clients" class="hidden">
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+              <input id="client-search" type="text" placeholder="Search companies…"
+                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 min-w-48" />
+              <button onclick="loadClients()" class="bg-tia-600 hover:bg-tia-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Search
+              </button>
+              <button onclick="openCreateClientModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-building mr-1"></i>Add Client
+              </button>
+            </div>
+            <div id="client-table-wrap"></div>
+          </div>
+
+          <!-- Client detail (contacts list) -->
+          <div id="client-detail-panel" class="hidden mt-4 bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <button onclick="closeClientDetail()" class="text-sm text-gray-500 hover:text-tia-600 mb-1">
+                  <i class="fa-solid fa-arrow-left mr-1"></i>Back to Clients
+                </button>
+                <h3 id="client-detail-name" class="font-semibold text-lg text-gray-800"></h3>
+              </div>
+              <button onclick="openAddContactModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-user-plus mr-1"></i>Add Contact
+              </button>
+            </div>
+            <div id="client-contacts-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Create Client Modal -->
+        <div id="create-client-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 class="font-semibold text-lg mb-4">Add Client Company</h3>
+            <div id="create-client-error" class="hidden mb-3 p-2 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
+                <input id="cc-name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea id="cc-notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+              </div>
+            </div>
+            <div class="flex gap-3 pt-4">
+              <button onclick="createClient()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm">Save</button>
+              <button onclick="closeCreateClientModal()" class="border border-gray-300 text-gray-600 px-5 py-2 rounded-lg text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Client Contact Modal -->
+        <div id="add-contact-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 class="font-semibold text-lg mb-4">Add Contact</h3>
+            <div id="add-contact-error" class="hidden mb-3 p-2 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                <input id="ac-name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                <input id="ac-email" type="email" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input id="ac-phone" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Temporary Password <span class="text-red-500">*</span></label>
+                <input id="ac-password" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div class="flex gap-3 pt-4">
+              <button onclick="createClientContact()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm">Save</button>
+              <button onclick="closeAddContactModal()" class="border border-gray-300 text-gray-600 px-5 py-2 rounded-lg text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job Cards -->
+        <div id="view-job-cards" class="hidden">
+          <div id="jc-list-panel" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+              <input id="jc-search" type="text" placeholder="Search job card #, customer, ticket…"
+                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 min-w-56" />
+              <button onclick="loadJobCards()" class="bg-tia-600 hover:bg-tia-700 text-white px-4 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Search
+              </button>
+              <button onclick="openJobCardForm()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm transition ml-auto">
+                <i class="fa-solid fa-plus mr-1"></i>New Job Card
+              </button>
+            </div>
+            <div id="jc-table-wrap"></div>
+          </div>
+
+          <!-- Create / Edit Job Card Form -->
+          <div id="jc-form-panel" class="hidden bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <button onclick="closeJobCardForm()" class="text-sm text-gray-500 hover:text-tia-600">
+                <i class="fa-solid fa-arrow-left mr-1"></i>Back to Job Cards
+              </button>
+              <div id="jc-form-title" class="font-semibold text-gray-700"></div>
+            </div>
+            <div id="jc-form-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+            <input type="hidden" id="jc-id" />
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                <input id="jc-customer-name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Linked Ticket (optional)</label>
+                <select id="jc-ticket-id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">— Standalone (no ticket) —</option>
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input id="jc-address" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                <input id="jc-contact-name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tel. No.</label>
+                <input id="jc-tel-no" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input id="jc-email" type="email" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Instruction Taken By</label>
+                <input id="jc-instruction-taken-by" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Job Done By</label>
+                <input id="jc-job-done-by" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Time Started</label>
+                <input id="jc-time-started" type="text" placeholder="e.g. 09:00" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Time Completed</label>
+                <input id="jc-time-completed" type="text" placeholder="e.g. 11:30" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
+                <textarea id="jc-instructions" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                <textarea id="jc-comments" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Signed By</label>
+                <input id="jc-signed-by" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                <input id="jc-designation" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div class="flex gap-3 pt-6">
+              <button onclick="saveJobCard()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm">Save Job Card</button>
+              <button onclick="closeJobCardForm()" class="border border-gray-300 text-gray-600 px-5 py-2 rounded-lg text-sm">Cancel</button>
+              <button id="jc-print-btn" onclick="printJobCard()" class="hidden border border-tia-300 text-tia-600 hover:bg-tia-50 px-5 py-2 rounded-lg text-sm ml-auto">
+                <i class="fa-solid fa-print mr-1"></i>Print
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job Card Print Layout (only ever shown inside the print window) -->
+        <div id="jc-print-template" class="hidden">
+          <style>
+            @page { size: A4; margin: 0; }
+            .jc-print-page {
+              position: relative;
+              width: 210mm;
+              min-height: 297mm;
+              font-family: Arial, sans-serif;
+              color: #111;
+              box-sizing: border-box;
+            }
+            .jc-print-bg {
+              position: fixed;
+              top: 0; left: 0;
+              width: 210mm; height: 297mm;
+              object-fit: cover;
+              z-index: -1;
+            }
+            .jc-print-content {
+              position: relative;
+              padding: 34mm 15mm 28mm 40mm;
+              font-size: 12px;
+            }
+            .jc-print-content table { width: 100%; border-collapse: collapse; }
+            .jc-print-content td { padding: 3px 6px; vertical-align: top; }
+          </style>
+          <div class="jc-print-page">
+            <img class="jc-print-bg" src="/img/letterhead.jpg" />
+            <div class="jc-print-content">
+              <div style="text-align:center; font-size:16px; font-weight:bold; margin-bottom:14px;">JOB CARD</div>
+              <table style="margin-bottom:14px;">
+                <tr>
+                  <td style="width:15%; font-weight:bold;">Customer:</td>
+                  <td style="width:35%; border-bottom:1px solid #999;" id="jcp-customer"></td>
+                  <td style="width:15%; font-weight:bold;">Job Number:</td>
+                  <td style="width:35%; border-bottom:1px solid #999;" id="jcp-jobno2"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:bold;">Address:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-address"></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td></td>
+                  <td style="font-weight:bold;">Date Received:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-date-received"></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td></td>
+                  <td style="font-weight:bold;">Instruction taken by:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-taken-by"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:bold;">Contact:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-contact"></td>
+                  <td style="font-weight:bold;">Job done by:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-done-by"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:bold;">Tel. No.:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-tel"></td>
+                  <td style="font-weight:bold;">Time started:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-time-started"></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:bold;">Email:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-email"></td>
+                  <td style="font-weight:bold;">Time completed:</td>
+                  <td style="border-bottom:1px solid #999;" id="jcp-time-completed"></td>
+                </tr>
+              </table>
+              <div style="margin-bottom:20px;">
+                <div style="font-weight:bold; margin-bottom:4px;">Instructions</div>
+                <div style="border:1px solid #999; min-height:90px; padding:8px; white-space:pre-wrap; background:rgba(255,255,255,0.65);" id="jcp-instructions"></div>
+              </div>
+              <table style="margin-bottom:20px;">
+                <tr>
+                  <td style="width:50%;">Signed by: <span id="jcp-signed-by" style="display:inline-block; border-bottom:1px solid #333; min-width:140px;"></span></td>
+                  <td style="width:50%;">Designation: <span id="jcp-designation" style="display:inline-block; border-bottom:1px solid #333; min-width:140px;"></span></td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;">Sign: <span style="display:inline-block; border-bottom:1px solid #333; min-width:140px;">&nbsp;</span></td>
+                  <td style="padding-top:14px;">Date: <span id="jcp-signed-date" style="display:inline-block; border-bottom:1px solid #333; min-width:140px;"></span></td>
+                </tr>
+              </table>
+              <div>
+                Comments: <span id="jcp-comments" style="display:inline-block; border-bottom:1px solid #333; min-width:280px;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Notifications -->
+        <div id="view-notifications" class="hidden max-w-2xl">
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+              <span class="font-medium text-gray-700">Notifications</span>
+              <button onclick="markAllRead()" class="text-sm text-tia-600 hover:underline">Mark all read</button>
+            </div>
+            <div id="notif-list" class="divide-y divide-gray-100"></div>
+          </div>
+        </div>
+
+      </div><!-- /p-6 -->
+    </main>
+  </div>
+
+  <!-- ═══ Edit Ticket Modal ═══════════════════════════════════════════════ -->
+  <div id="edit-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style="max-height:90vh">
+      <div class="px-6 pt-6 pb-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <h3 class="text-lg font-semibold text-gray-800">Edit Ticket</h3>
+        <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      </div>
+      <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
+        <div id="edit-error" class="hidden p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+
+        <!-- Request -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Request / Title</label>
+          <input id="edit-title" type="text" placeholder="Title"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        </div>
+
+        <!-- Row: Request Level + Support Type -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Request Level</label>
+            <select id="edit-request-level" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="Level 1">Level 1</option>
+              <option value="Level 2">Level 2</option>
+              <option value="Level 3">Level 3</option>
+              <option value="Level 4">Level 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Remote / On-site</label>
+            <select id="edit-support-type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="remote">Remote</option>
+              <option value="onsite">On-site</option>
+              <option value="remote_onsite">Remote and On-site</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row: Status + Priority -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+            <select id="edit-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="pending">Pending</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Priority</label>
+            <select id="edit-priority" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Attended By (Assign) -->
+        <div id="edit-assigned-wrap">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Attended By (Assign To)</label>
+          <select id="edit-assigned" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+            <option value="">— Unassigned —</option>
+          </select>
+        </div>
+
+        <!-- Work Implemented -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Work Implemented</label>
+          <textarea id="edit-work-implemented" rows="3" placeholder="Describe what was done to resolve the issue…"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 resize-none"></textarea>
+        </div>
+
+        <!-- Start / End Time -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Start Time</label>
+            <input id="edit-start-time" type="datetime-local"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">End Time</label>
+            <input id="edit-end-time" type="datetime-local"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500"
+              oninput="autoCalcHours()" />
+          </div>
+        </div>
+
+        <!-- Hours Worked + Invoice No -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Hours Worked</label>
+            <input id="edit-hours-worked" type="text" placeholder="e.g. 44 Minutes / 2 Hours"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Invoice No.</label>
+            <input id="edit-invoice-no" type="text" placeholder="e.g. INV-0042"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description</label>
+          <textarea id="edit-description" rows="3" placeholder="Description"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500 resize-none"></textarea>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <button onclick="saveEdit()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition">Save Changes</button>
+        <button onclick="closeEditModal()" class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm transition">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Create User Modal ═══════════════════════════════════════════════ -->
+  <div id="create-user-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-semibold mb-4 text-gray-800">Add User</h3>
+      <div id="create-user-error" class="hidden mb-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+      <div class="space-y-3">
+        <input id="cu-name" type="text" placeholder="Full Name"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <input id="cu-email" type="email" placeholder="Email"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <input id="cu-company" type="text" placeholder="Company"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <input id="cu-phone" type="tel" placeholder="Phone"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <select id="cu-role" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+          <option value="client">Client</option>
+          <option value="agent">Agent</option>
+          <option value="technician">Technician</option>
+          <option value="admin">Admin</option>
+        </select>
+        <input id="cu-password" type="password" placeholder="Temporary password"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="createUser()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition">Create</button>
+        <button onclick="closeCreateUserModal()" class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm transition">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ User Edit Modal ══════════════════════════════════════════════════ -->
+  <div id="user-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-semibold mb-4 text-gray-800">Edit User</h3>
+      <div id="user-modal-error" class="hidden mb-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+      <div class="space-y-3">
+        <input id="um-name"    type="text"  placeholder="Full Name"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <input id="um-company" type="text"  placeholder="Company"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <input id="um-phone"   type="tel"   placeholder="Phone"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+        <select id="um-role" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500">
+          <option value="client">Client</option>
+          <option value="agent">Agent</option>
+          <option value="technician">Technician</option>
+          <option value="admin">Admin</option>
+        </select>
+        <input id="um-password" type="password" placeholder="New password (leave blank to keep)"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tia-500" />
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="saveUserEdit()" class="bg-tia-600 hover:bg-tia-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition">Save</button>
+        <button onclick="closeUserModal()" class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm transition">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
