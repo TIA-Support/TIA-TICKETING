@@ -42,7 +42,7 @@ def register():
             client_id = existing_client["id"]
         else:
             cur.execute("INSERT INTO clients (name) VALUES (%s) RETURNING id", (company,))
-            client_id = cur.fetchone()["id"]
+            client_id = cur.lastrowid
 
         cur.execute(
             "INSERT INTO users (name, email, password, role, company, phone, client_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
@@ -51,7 +51,7 @@ def register():
         db.commit()
     except Exception:
         db.rollback()
-        return jsonify(error="Email already registered."), 409
+        return jsonify(error="Email already ed."), 409
     finally:
         cur.close()
         db.close()
@@ -108,7 +108,7 @@ def forgot_password():
     email = (data.get("email") or "").strip().lower()
 
     # Always return the same generic response whether or not the email exists,
-    # so this endpoint can't be used to discover which emails are registered.
+    # so this endpoint can't be used to discover which emails are ed.
     generic_response = jsonify(
         message="A password reset link has been sent to your email."
     )
