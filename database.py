@@ -1,14 +1,17 @@
 """
 TIA-Solutions Ticketing System
-Database initialisation and helper utilities (PostgreSQL / Neon).
+Database initialisation and helper utilities (MySQL / MariaDB).
 """
 
 import os
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse, unquote
 from zoneinfo import ZoneInfo
-import psycopg2
-import psycopg2.extras
 
+import pymysql
+import pymysql.cursors
+
+# Format: mysql+pymysql://DBUSER:DBPASSWORD@localhost/DBNAME
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # TIA-Solutions SLA framework — targets in business hours, keyed by request level (1-5).
@@ -85,177 +88,213 @@ def compute_sla_due_dates(request_level, created_at_utc):
 
 
 def get_db():
-    """Return a live connection with dict-like rows (RealDictRow)."""
+    """Return a live connection whose cursors give dict rows.
+
+    The session time zone is forced to UTC so NOW() / CURRENT_TIMESTAMP store
+    UTC, which is what the rest of the app (SLA maths, format_sast) expects.
+    """
     if not DATABASE_URL:
         raise RuntimeError(
-            "DATABASE_URL is not set. Add your Neon connection string as the "
-            "DATABASE_URL environment variable."
+            "DATABASE_URL is not set. Set it to "
+            "mysql+pymysql://DBUSER:DBPASSWORD@localhost/DBNAME"
         )
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require",
-                             cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn
+    u = urlparse(DATABASE_URL)
+    return pymysql.connect(
+        host=u.hostname or "localhost",
+        port=u.port or 3306,
+        user=unquote(u.username or ""),
+        password=unquote(u.password or ""),
+        database=(u.path or "/").lstrip("/"),
+        charset="utf8mb4",
+        cursorclass=pymysql.cursors.DictCursor,
+        init_command="SET time_zone = '+00:00'",
+        autocommit=False,
+    )
+
+
+_TABLE_OPTS = "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
 
 
 def init_db():
     conn = get_db()
     c = conn.cursor()
+    try:
+        # Clients (companies) — a client's contacts are users with role='client' and client_id set
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS clients (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                name       VARCHAR(190) NOT NULL,
+                notes      TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_clients_name (name)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Users
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id        SERIAL PRIMARY KEY,
-            name      TEXT    NOT NULL,
-            email     TEXT    NOT NULL UNIQUE,
-            password  TEXT    NOT NULL,
-            role      TEXT    NOT NULL DEFAULT 'client',
-            company   TEXT,
-            phone     TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
+        # Users
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS users (
+                id                  INT AUTO_INCREMENT PRIMARY KEY,
+                name                VARCHAR(255) NOT NULL,
+                email               VARCHAR(190) NOT NULL,
+                password            VARCHAR(255) NOT NULL,
+                role                VARCHAR(30)  NOT NULL DEFAULT 'client',
+                company             VARCHAR(255),
+                phone               VARCHAR(60),
+                client_id           INT NULL,
+                reset_token         VARCHAR(255),
+                reset_token_expires DATETIME NULL,
+                created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_users_email (email),
+                CONSTRAINT fk_users_client FOREIGN KEY (client_id) REFERENCES clients(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Clients (companies) — a client's contacts are users with role='client' and client_id set
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS clients (
-            id         SERIAL PRIMARY KEY,
-            name       TEXT   NOT NULL UNIQUE,
-            notes      TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
-    c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id)")
-    c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT")
-    c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP")
+        # Tickets
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS tickets (
+                id                   INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_no            VARCHAR(40)  NOT NULL,
+                title                TEXT         NOT NULL,
+                description          TEXT         NOT NULL,
+                category             VARCHAR(40)  NOT NULL,
+                priority             VARCHAR(20)  NOT NULL DEFAULT 'medium',
+                request_level        VARCHAR(20)  NOT NULL DEFAULT 'Level 1',
+                status               VARCHAR(20)  NOT NULL DEFAULT 'open',
+                support_type         VARCHAR(20)  DEFAULT 'remote',
+                work_implemented     TEXT,
+                start_time           TEXT,
+                end_time             TEXT,
+                hours_worked         TEXT,
+                invoice_no           TEXT,
+                created_by           INT NOT NULL,
+                assigned_to          INT NULL,
+                created_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                sla_response_due     DATETIME NULL,
+                sla_resolution_due   DATETIME NULL,
+                first_response_at    DATETIME NULL,
+                resolved_at          DATETIME NULL,
+                last_sla_reminder_at DATETIME NULL,
+                UNIQUE KEY uq_tickets_no (ticket_no),
+                CONSTRAINT fk_tickets_creator  FOREIGN KEY (created_by)  REFERENCES users(id),
+                CONSTRAINT fk_tickets_assignee FOREIGN KEY (assigned_to) REFERENCES users(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Tickets
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS tickets (
-            id                SERIAL  PRIMARY KEY,
-            ticket_no         TEXT    NOT NULL UNIQUE,
-            title             TEXT    NOT NULL,
-            description       TEXT    NOT NULL,
-            category          TEXT    NOT NULL,
-            priority          TEXT    NOT NULL DEFAULT 'medium',
-            request_level     TEXT    NOT NULL DEFAULT 'Level 1',
-            status            TEXT    NOT NULL DEFAULT 'open',
-            support_type      TEXT    DEFAULT 'remote',
-            work_implemented  TEXT,
-            start_time        TEXT,
-            end_time          TEXT,
-            hours_worked      TEXT,
-            invoice_no        TEXT,
-            created_by        INTEGER NOT NULL REFERENCES users(id),
-            assigned_to       INTEGER REFERENCES users(id),
-            created_at        TIMESTAMP DEFAULT NOW(),
-            updated_at        TIMESTAMP DEFAULT NOW()
-        )
-    """)
+        # Comments
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS comments (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id   INT NOT NULL,
+                user_id     INT NOT NULL,
+                body        TEXT NOT NULL,
+                is_internal INT DEFAULT 0,
+                created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_comments_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                CONSTRAINT fk_comments_user   FOREIGN KEY (user_id)   REFERENCES users(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Safe column migrations (idempotent on Postgres 9.6+)
-    migrations = [
-        ("request_level",     "TEXT NOT NULL DEFAULT 'Level 1'"),
-        ("support_type",      "TEXT DEFAULT 'remote'"),
-        ("work_implemented",  "TEXT"),
-        ("start_time",        "TEXT"),
-        ("end_time",          "TEXT"),
-        ("hours_worked",      "TEXT"),
-        ("invoice_no",        "TEXT"),
-        ("sla_response_due",   "TIMESTAMP"),
-        ("sla_resolution_due", "TIMESTAMP"),
-        ("first_response_at",  "TIMESTAMP"),
-        ("resolved_at",        "TIMESTAMP"),
-        ("last_sla_reminder_at", "TIMESTAMP"),
-    ]
-    for col, col_def in migrations:
-        c.execute(f"ALTER TABLE tickets ADD COLUMN IF NOT EXISTS {col} {col_def}")
+        # Notifications
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                user_id    INT NOT NULL,
+                message    TEXT NOT NULL,
+                link       VARCHAR(500),
+                is_read    INT DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Comments
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS comments (
-            id         SERIAL  PRIMARY KEY,
-            ticket_id  INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-            user_id    INTEGER NOT NULL REFERENCES users(id),
-            body       TEXT    NOT NULL,
-            is_internal INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
+        # Job cards — standalone onsite work records, optionally linked to a ticket
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS job_cards (
+                id                   INT AUTO_INCREMENT PRIMARY KEY,
+                job_card_no          VARCHAR(40) NOT NULL,
+                ticket_id            INT NULL,
+                customer_name        TEXT,
+                address              TEXT,
+                contact_name         TEXT,
+                tel_no               TEXT,
+                email                TEXT,
+                date_received        DATETIME NULL,
+                instruction_taken_by TEXT,
+                job_done_by          TEXT,
+                time_started         TEXT,
+                time_completed       TEXT,
+                instructions         TEXT,
+                comments             TEXT,
+                signed_by            TEXT,
+                designation          TEXT,
+                signed_date          DATETIME NULL,
+                created_by           INT NULL,
+                created_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_job_cards_no (job_card_no),
+                CONSTRAINT fk_job_cards_ticket  FOREIGN KEY (ticket_id)  REFERENCES tickets(id) ON DELETE SET NULL,
+                CONSTRAINT fk_job_cards_creator FOREIGN KEY (created_by) REFERENCES users(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    # Notifications
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS notifications (
-            id         SERIAL  PRIMARY KEY,
-            user_id    INTEGER NOT NULL REFERENCES users(id),
-            message    TEXT    NOT NULL,
-            link       TEXT,
-            is_read    INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
+        # Audit log
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id  INT NULL,
+                user_id    INT NULL,
+                action     TEXT NOT NULL,
+                details    TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_audit_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                CONSTRAINT fk_audit_user   FOREIGN KEY (user_id)   REFERENCES users(id)
+            ) {_TABLE_OPTS}
+        """)
 
-    c.execute("CREATE SEQUENCE IF NOT EXISTS ticket_no_seq START 1")
+        # Counters — replaces the Postgres sequences used for ticket / job card numbers
+        c.execute(f"""
+            CREATE TABLE IF NOT EXISTS counters (
+                name  VARCHAR(40) NOT NULL PRIMARY KEY,
+                value INT NOT NULL DEFAULT 0
+            ) {_TABLE_OPTS}
+        """)
+        c.execute("INSERT IGNORE INTO counters (name, value) VALUES ('ticket_no', 0), ('job_card_no', 0)")
 
-    # Job cards — standalone onsite work records, optionally linked to a ticket
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS job_cards (
-            id                    SERIAL  PRIMARY KEY,
-            job_card_no           TEXT    NOT NULL UNIQUE,
-            ticket_id             INTEGER REFERENCES tickets(id) ON DELETE SET NULL,
-            customer_name         TEXT,
-            address               TEXT,
-            contact_name          TEXT,
-            tel_no                TEXT,
-            email                 TEXT,
-            date_received         TIMESTAMP,
-            instruction_taken_by  TEXT,
-            job_done_by           TEXT,
-            time_started          TEXT,
-            time_completed        TEXT,
-            instructions          TEXT,
-            comments              TEXT,
-            signed_by             TEXT,
-            designation           TEXT,
-            signed_date           TIMESTAMP,
-            created_by            INTEGER REFERENCES users(id),
-            created_at            TIMESTAMP DEFAULT NOW(),
-            updated_at            TIMESTAMP DEFAULT NOW()
-        )
-    """)
-    c.execute("CREATE SEQUENCE IF NOT EXISTS job_card_no_seq START 1")
-
-    # Audit log
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id         SERIAL  PRIMARY KEY,
-            ticket_id  INTEGER REFERENCES tickets(id) ON DELETE CASCADE,
-            user_id    INTEGER REFERENCES users(id),
-            action     TEXT    NOT NULL,
-            details    TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
-
-    conn.commit()
-
-    # Seed default admin + demo agent
-    from werkzeug.security import generate_password_hash
-    c.execute("SELECT id FROM users WHERE email = %s", ("admin@tia-solutions.co.za",))
-    existing = c.fetchone()
-    if not existing:
-        c.execute(
-            "INSERT INTO users (name, email, password, role, company) VALUES (%s,%s,%s,%s,%s)",
-            ("TIA Admin", "admin@tia-solutions.co.za",
-             generate_password_hash("Admin@1234"), "admin", "TIA Solutions")
-        )
-        c.execute(
-            "INSERT INTO users (name, email, password, role, company) VALUES (%s,%s,%s,%s,%s)",
-            ("Support Agent", "agent@tia-solutions.co.za",
-             generate_password_hash("Agent@1234"), "agent", "TIA Solutions")
-        )
         conn.commit()
 
-    c.close()
-    conn.close()
+        _seed_admin(conn, c)
+    finally:
+        c.close()
+        conn.close()
+
+
+def _seed_admin(conn, c):
+    """Create the first admin account on an EMPTY users table only.
+
+    The password comes from the ADMIN_PASSWORD environment variable (never from
+    the source code). If it isn't set, nothing is created.
+    Optional: ADMIN_EMAIL (defaults to admin@tia-solutions.co.za).
+    """
+    admin_password = os.environ.get("ADMIN_PASSWORD")
+    if not admin_password:
+        return
+    admin_email = (os.environ.get("ADMIN_EMAIL") or "admin@tia-solutions.co.za").strip().lower()
+
+    c.execute("SELECT COUNT(*) AS n FROM users")
+    if c.fetchone()["n"] != 0:
+        return
+
+    from werkzeug.security import generate_password_hash
+    try:
+        c.execute(
+            "INSERT INTO users (name, email, password, role, company) VALUES (%s,%s,%s,%s,%s)",
+            ("TIA Admin", admin_email, generate_password_hash(admin_password), "admin", "TIA Solutions"),
+        )
+        conn.commit()
+    except pymysql.err.IntegrityError:
+        # Another worker process created it at the same moment — that's fine.
+        conn.rollback()
 
 
 def format_sast(dt, fmt="%d %B %Y %H:%M"):
@@ -270,24 +309,27 @@ def format_sast(dt, fmt="%d %B %Y %H:%M"):
     return dt.astimezone(ZoneInfo(OFFICE_TZ_NAME)).strftime(fmt)
 
 
-def next_ticket_no():
+def _next_counter(name):
+    """Atomically increment and return a named counter."""
     conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT nextval('ticket_no_seq') as num")
-    num = c.fetchone()["num"]
-    c.close()
-    conn.close()
-    return f"TIA-{num:05d}"
+    try:
+        c = conn.cursor()
+        c.execute("UPDATE counters SET value = LAST_INSERT_ID(value + 1) WHERE name = %s", (name,))
+        c.execute("SELECT LAST_INSERT_ID() AS num")
+        num = int(c.fetchone()["num"])
+        conn.commit()
+        c.close()
+        return num
+    finally:
+        conn.close()
+
+
+def next_ticket_no():
+    return f"TIA-{_next_counter('ticket_no'):05d}"
 
 
 def next_job_card_no():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT nextval('job_card_no_seq') as num")
-    num = c.fetchone()["num"]
-    c.close()
-    conn.close()
-    return f"JC-{num:05d}"
+    return f"JC-{_next_counter('job_card_no'):05d}"
 
 
 def log_action(cur, ticket_id, user_id, action, details=""):
@@ -300,7 +342,6 @@ def log_action(cur, ticket_id, user_id, action, details=""):
 
 def sla_status(ticket):
     """Given a ticket dict/row, compute SLA breach flags. Returns a dict to merge in."""
-    from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
 
     def _aware(dt):
