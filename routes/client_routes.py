@@ -33,7 +33,7 @@ def list_clients():
            WHERE 1=1"""
     params = []
     if search:
-        q += " AND c.name ILIKE %s"; params.append(f"%{search}%")
+        q += " AND c.name LIKE %s"; params.append(f"%{search}%")
     q += " GROUP BY c.id ORDER BY c.name ASC"
     cur.execute(q, params)
     rows = cur.fetchall()
@@ -62,7 +62,7 @@ def create_client():
             "INSERT INTO clients (name, notes) VALUES (%s,%s) RETURNING id",
             (name, notes)
         )
-        client_id = cur.fetchone()["id"]
+        client_id = cur.lastrowid
         db.commit()
     except Exception:
         db.rollback()
