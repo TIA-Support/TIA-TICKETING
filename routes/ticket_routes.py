@@ -148,7 +148,7 @@ def create_ticket():
          request_level, support_type, created_by, assigned_to,
          now_utc, response_due, resolution_due)
     )
-    ticket_id = cur.fetchone()["id"]
+    ticket_id = cur.lastrowid
     log_note = f"Priority: {priority}, Category: {category}"
     if created_by != uid:
         log_note += f" (logged on behalf of contact #{created_by})"
