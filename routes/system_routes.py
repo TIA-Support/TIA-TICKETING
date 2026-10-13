@@ -1,7 +1,7 @@
 """System/automation routes — SLA reminder job + one-time backfills, triggered manually or by a scheduler."""
 
 import os
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify
 from database import get_db, sla_status, log_action, compute_sla_due_dates
 from mailer import send_email, render_sla_reminder_email
@@ -45,12 +45,11 @@ def check_sla():
             continue
 
         # Throttle: skip if we already reminded within the cooldown window
-        if t["last_sla_reminder_at"]:
-            cur.execute(
-                "SELECT NOW() - %s < (%s || ' hours')::interval as recent",
-                (t["last_sla_reminder_at"], REMINDER_COOLDOWN_HOURS)
-            )
-            if cur.fetchone()["recent"]:
+        last_reminder = t["last_sla_reminder_at"]
+        if last_reminder:
+            if last_reminder.tzinfo is None:
+                last_reminder = last_reminder.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) - last_reminder < timedelta(hours=REMINDER_COOLDOWN_HOURS):
                 continue
 
         breach_kind = []
@@ -140,37 +139,40 @@ def backfill_first_response():
     backdate first_response_at to when that reply actually happened. Tickets
     with no staff reply yet are left untouched. Safe to run more than once —
     it only ever fills in NULLs, never overwrites an existing value."""
-    if not _check_secret():
+        if not _check_secret():
         return jsonify(error="Unauthorized."), 401
 
     db  = get_db()
     cur = db.cursor()
+    placeholders = ",".join(["%s"] * len(STAFF_ROLES))
     cur.execute(
-        """UPDATE tickets t
-           SET first_response_at = sub.first_staff_reply
-           FROM (
-               SELECT c.ticket_id, MIN(c.created_at) as first_staff_reply
-               FROM comments c
-               JOIN users u ON c.user_id = u.id
-               WHERE u.role IN %s
-               GROUP BY c.ticket_id
-           ) sub
-           WHERE t.id = sub.ticket_id AND t.first_response_at IS NULL
-           RETURNING t.id, t.ticket_no, t.first_response_at""",
-        (STAFF_ROLES,)
+        f"""SELECT c.ticket_id, t.ticket_no, MIN(c.created_at) AS first_staff_reply
+            FROM comments c
+            JOIN users u   ON c.user_id = u.id
+            JOIN tickets t ON c.ticket_id = t.id
+            WHERE u.role IN ({placeholders}) AND t.first_response_at IS NULL
+            GROUP BY c.ticket_id, t.ticket_no""",
+        STAFF_ROLES
     )
-    updated = cur.fetchall()
+    candidates = cur.fetchall()
 
-    for row in updated:
-        log_action(cur, row["id"], None, "first_response_backfilled", str(row["first_response_at"]))
+    updated = []
+    for row in candidates:
+        cur.execute(
+            "UPDATE tickets SET first_response_at=%s WHERE id=%s AND first_response_at IS NULL",
+            (row["first_staff_reply"], row["ticket_id"])
+        )
+        log_action(cur, row["ticket_id"], None, "first_response_backfilled", str(row["first_staff_reply"]))
+        updated.append({
+            "id": row["ticket_id"],
+            "ticket_no": row["ticket_no"],
+            "first_response_at": str(row["first_staff_reply"]),
+        })
 
     db.commit()
     cur.close()
     db.close()
-    return jsonify(
-        updated_count=len(updated),
-        tickets=[{"id": r["id"], "ticket_no": r["ticket_no"], "first_response_at": str(r["first_response_at"])} for r in updated]
-    )
+    return jsonify(updated_count=len(updated), tickets=updated)
 
 
 @system_bp.route("/backfill-client-companies", methods=["GET", "POST"])
@@ -199,8 +201,8 @@ def backfill_client_companies():
         if existing:
             client_id = existing["id"]
         else:
-            cur.execute("INSERT INTO clients (name) VALUES (%s) RETURNING id", (company_name,))
-            client_id = cur.fetchone()["id"]
+            cur.execute("INSERT INTO clients (name) VALUES (%s)", (company_name,))
+            client_id = cur.lastrowid
 
         cur.execute("UPDATE users SET client_id=%s WHERE id=%s", (client_id, u["id"]))
         updated.append({"user_id": u["id"], "company": company_name})
