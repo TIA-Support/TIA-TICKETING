@@ -59,7 +59,7 @@ def create_client():
 
     try:
         cur.execute(
-            "INSERT INTO clients (name, notes) VALUES (%s,%s) RETURNING id",
+            "INSERT INTO clients (name, notes) VALUES (%s,%s)",
             (name, notes)
         )
         client_id = cur.lastrowid
