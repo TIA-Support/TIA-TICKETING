@@ -61,7 +61,7 @@ def list_tickets():
     if priority and priority in PRIORITIES: base_q += " AND t.priority = %s"; params.append(priority)
     if category and category in CATEGORIES: base_q += " AND t.category = %s"; params.append(category)
     if search:
-        base_q += " AND (t.title ILIKE %s OR t.ticket_no ILIKE %s OR t.description ILIKE %s)"
+        base_q += " AND (t.title LIKE %s OR t.ticket_no LIKE %s OR t.description LIKE %s)"
         s = f"%{search}%"
         params += [s, s, s]
 
@@ -143,8 +143,7 @@ def create_ticket():
                (ticket_no, title, description, category, priority,
                 request_level, support_type, status, created_by, assigned_to,
                 created_at, sla_response_due, sla_resolution_due)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,'open',%s,%s,%s,%s,%s)
-           RETURNING id""",
+           VALUES (%s,%s,%s,%s,%s,%s,%s,'open',%s,%s,%s,%s,%s)""",
         (ticket_no, title, description, category, priority,
          request_level, support_type, created_by, assigned_to,
          now_utc, response_due, resolution_due)
