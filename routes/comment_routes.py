@@ -34,10 +34,10 @@ def add_comment(ticket_id):
     is_internal = int(bool(data.get("is_internal"))) if user["role"] in STAFF_ROLES else 0
 
     cur.execute(
-        "INSERT INTO comments (ticket_id, user_id, body, is_internal) VALUES (%s,%s,%s,%s) RETURNING id",
+        "INSERT INTO comments (ticket_id, user_id, body, is_internal) VALUES (%s,%s,%s,%s),
         (ticket_id, uid, body, is_internal)
     )
-    comment_id = cur.fetchone()["id"]
+    comment_id = cur.lastrowid
 
     # The first staff reply on a ticket satisfies the "first response" SLA target.
     if user["role"] in STAFF_ROLES and not t["first_response_at"]:
