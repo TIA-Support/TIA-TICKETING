@@ -68,7 +68,7 @@ def list_users():
     q = "SELECT id,name,email,role,company,phone,created_at FROM users WHERE 1=1"
     params = []
     if role:   q += " AND role=%s";                    params.append(role)
-    if search: q += " AND (name ILIKE %s OR email ILIKE %s)"; params += [f"%{search}%", f"%{search}%"]
+    if search: q += " AND (name LIKE %s OR email LIKE %s)"; params += [f"%{search}%", f"%{search}%"]
     q += " ORDER BY created_at DESC"
     cur.execute(q, params)
     rows = cur.fetchall()
