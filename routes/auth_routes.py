@@ -41,7 +41,7 @@ def register():
         if existing_client:
             client_id = existing_client["id"]
         else:
-            cur.execute("INSERT INTO clients (name) VALUES (%s) RETURNING id", (company,))
+            cur.execute("INSERT INTO clients (name) VALUES (%s)", (company,))
             client_id = cur.lastrowid
 
         cur.execute(
