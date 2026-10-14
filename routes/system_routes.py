@@ -9,7 +9,7 @@ from mailer import send_email, render_sla_reminder_email
 system_bp = Blueprint("system", __name__)
 
 CRON_SECRET = os.environ.get("CRON_SECRET")
-APP_BASE_URL = os.environ.get("APP_BASE_URL", "")  # e.g. https://tia-ticketing-1.onrender.com — used to build links in emails
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "")  # e.g. https://tickets.tia-solutions.co.za — used to build links in emails
 REMINDER_COOLDOWN_HOURS = 4  # don't re-notify the same ticket more than once per this window
 OPEN_STATUSES = ("open", "in_progress", "pending")
 STAFF_ROLES = ("admin", "agent", "technician")
@@ -139,7 +139,7 @@ def backfill_first_response():
     backdate first_response_at to when that reply actually happened. Tickets
     with no staff reply yet are left untouched. Safe to run more than once —
     it only ever fills in NULLs, never overwrites an existing value."""
-        if not _check_secret():
+    if not _check_secret():
         return jsonify(error="Unauthorized."), 401
 
     db  = get_db()
